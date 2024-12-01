@@ -1,4 +1,4 @@
-# Project Name
+# HopHovac
 
 ## Overview
 This is a grid-based game where players and AI-controlled opponents move around the grid, capturing tiles and collecting pickups to score points. The goal is to outsmart and outperform opponents to control the most tiles.

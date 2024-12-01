@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8be906a1eef52aa4a89cfe845ffdd2d9, type: 3}
+  m_Name: Player 1
+  m_EditorClassIdentifier: 
+  playerName: Player1
+  playerTransform: {fileID: 5430499043896795434, guid: 5f8fedc733cb1fb43876e9b0ea8ed612, type: 3}
+  speed: 4.5
+  playerColor: {r: 0.29076165, g: 0.7921569, b: 0.17647056, a: 1}
+  points: 10
+  speedRotation: 5
+  currentGridPosition: {x: 5, y: 3}
+  TargetLocation: {x: 0, y: 0}
+  Path: []

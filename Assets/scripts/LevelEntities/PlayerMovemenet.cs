@@ -25,7 +25,7 @@ public class PlayerMovement : MonoBehaviour
         }
         if (Input.GetMouseButtonDown(0)) 
         {
-            playerData.hasMissile = false;
+            playerData.hasAbility = false;
         }
     }
 

@@ -1,7 +1,9 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 
 public class PlayerData :MonoBehaviour {
@@ -10,30 +12,32 @@ public class PlayerData :MonoBehaviour {
     [Header("VFX")]
     public GameObject DisabledVFX; 
     public GameObject HitVFX;
-    
+    public GameObject HasAbilityVFX;
 
+    [Header("player settings")]
     // Basic player properties
     [SerializeField] private string playerName;              // Name of the player
-     
     [SerializeField] private float speed = 5f;               // Speed of the player
     [SerializeField] private Color playerColor = Color.white; // Color associated with the player
     [SerializeField] private int points = 0;                 // Player's current points
     [SerializeField] private float speedRotation = 5f;       // Speed at which the player rotates
-    [SerializeField] private Vector2Int currentGridPosition; // Player's position on the grid
+    [SerializeField] private Vector2Int currentGridPosition;  
     [SerializeField] private Node targetNode;
-    [SerializeField] private GridSystem gridSystem;
+      public  GridSystem gridSystem;
+    
     
     // Opponent tracking properties
 
     private List<PlayerData> opponents = new List<PlayerData>();  // Private list of opponents
     public PlayerData MainCompetitor { get; private set; }        // Primary competitor for score or position
     public Vector2Int TargetLocation;     
-    public List<Vector2Int>Path = new List<Vector2Int>();
+     
+    public AbilityPoolManager abilityPoolManager;
 
-    public ProjectileCollectable ActiveCollectable;
     private void Awake()
     {
             gridSystem = FindAnyObjectByType<GridSystem>();
+            abilityPoolManager = FindAnyObjectByType<AbilityPoolManager>();
             gridSystem.playersList.Add(this);
     }
 
@@ -46,7 +50,7 @@ public class PlayerData :MonoBehaviour {
 
     // Tracking tile ownership and collectables
     private List<Node> ownedTiles = new List<Node>();  // List of nodes owned by the player
-    public bool hasMissile = false;                   // Flag to track missile possession
+    public bool hasAbility = false;                   // Flag to track missile possession
 
 
 
@@ -65,7 +69,22 @@ public class PlayerData :MonoBehaviour {
         get => currentGridPosition;
         set => currentGridPosition = value;
     }
+     
+    public GameObject projectileObject;
+    public Vector3 DirectionVec;
 
+    public Ability currentAbility;
+    public bool Disabled; 
+
+  
+    private Vector3 GetFrontGridPosition()
+    {
+        Vector2Int direction = new Vector2Int(
+            Mathf.RoundToInt(DirectionVec.x),
+            Mathf.RoundToInt(DirectionVec.z)
+        );
+        return gridSystem.GetWorldPositionFromGrid(CurrentGridPosition + direction) + Vector3.up * 0.5f;
+    }
     // Methods to manage points
     public void AddPoints()
     {
@@ -98,21 +117,7 @@ public class PlayerData :MonoBehaviour {
         points = 0;
     }
 
-    public void HitDisable() 
-    {
-    HitVFX.SetActive(true);
-    StartCoroutine(Disable());
-    }
-    private IEnumerator Disable()
-    {
-        DisabledVFX.SetActive(true);
-        speed = 0;
-        yield return new WaitForSeconds(3.5f);
-        DisabledVFX.SetActive(false);
-        HitVFX.SetActive(false);
-        speed = 5;
-    
-    }
+ 
     // Opponent management
     public void SetOpponents(List<PlayerData> newOpponents)
     {
@@ -137,23 +142,141 @@ public class PlayerData :MonoBehaviour {
     {
         ownedTiles.Remove(tile);
     }
-
-    // Missile management - player can only have one missile at a time
-    public bool HasMissile => hasMissile;
-
-    public bool AddMissile()
+    
+     
+    public bool HasAbility => hasAbility;
+    public void AddAbility(AbilityType abilityType)
     {
-        if (!hasMissile)
+
+        if (!hasAbility)
         {
-            hasMissile = true;
-            return true; // Missile added successfully
+            GetAbility(abilityType);
         }
-        return false; // Player already has a missile, no additional missile added
+        else
+        {
+            RemoveAbility(currentAbility);
+            GetAbility(abilityType);
+        }
     }
 
-    public void UseMissile()
+    private void GetAbility(AbilityType abilityType)
     {
-        if (hasMissile)
-            hasMissile = false; // Missile is used up and removed
+        currentAbility = abilityPoolManager.GetAbility(abilityType, this);
+        currentAbility.transform.SetParent(this.transform);
+
+
+        currentAbility.transform.position = GetFrontGridPosition();
+
+
+        currentAbility.gameObject.SetActive(false);
+
+
+        hasAbility = true;
+        EnableVFX(HasAbilityVFX);
+    }
+
+    public void UseAbility()
+    {
+        if (hasAbility && currentAbility != null)
+        {
+            currentAbility.gameObject.SetActive(true);
+            currentAbility.Activate(DirectionVec, GetFrontGridPosition());
+            hasAbility = false;
+            DisableVFX(HasAbilityVFX);
+        }
+    }
+    public void RemoveAbility(Ability currentAbility)
+    {
+        if (currentAbility != null)
+        {
+            // Return the ability to the AbilityPoolManager
+            currentAbility.transform.SetParent(abilityPoolManager.transform);
+
+            // Deactivate and return the ability to the pool
+            abilityPoolManager.ReturnAbility(currentAbility, currentAbility.AbilityType);
+
+            currentAbility = null;
+            hasAbility = false;
+            DisableVFX(HasAbilityVFX);
+        }
+    }
+
+    private void DisableVFX(GameObject gameObject) 
+    {
+    gameObject.SetActive(false);
+    
+    }
+    private void EnableVFX(GameObject gameObject) 
+    {
+
+        gameObject.SetActive(true);
+    }
+
+    private IEnumerator SmoothSpeedReduction(float duration)
+    {
+        float initialSpeed = speed;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            // Gradually reduce speed to zero
+            speed = Mathf.Lerp(initialSpeed, 0, elapsed / duration);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        // Ensure speed is exactly zero at the end
+        speed = 0;
+    }
+
+    private IEnumerator SmoothSnapToGridPosition(float duration)
+    {
+        Vector3 startPosition = transform.position;
+        Vector3 targetPosition = gridSystem.GetWorldPositionFromGrid(currentGridPosition);
+        float elapsedTime = 0f;
+
+        while (elapsedTime < duration)
+        {
+            // Smoothly interpolate the position
+            transform.position = Vector3.Lerp(startPosition, targetPosition, elapsedTime / duration);
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+
+        // Ensure the player is exactly at the target position
+        transform.position = targetPosition;
+    }
+
+    public void HitDisable()
+    {
+        EnableVFX(HitVFX);
+        Disabled = true;
+        // Remove ability if present
+        if (hasAbility)
+        {
+            RemoveAbility(currentAbility);
+        }
+
+        // Start the speed reduction coroutine and snap to the grid at the end
+        StartCoroutine(DisableWithSpeedReduction());
+    }
+
+    private IEnumerator DisableWithSpeedReduction()
+    {
+        // Smoothly reduce speed to zero
+        yield return StartCoroutine(SmoothSpeedReduction(1f)); // Adjust duration as needed
+
+        // Snap the player to the nearest grid position
+       StartCoroutine(SmoothSnapToGridPosition(1f));
+
+        // Wait for the rest of the disable duration
+        DisabledVFX.SetActive(true);
+        yield return new WaitForSeconds(2.5f); // Adjust disable time as needed
+
+        // Re-enable speed and disable VFX
+        DisableVFX(DisabledVFX);
+        DisableVFX(HitVFX);
+        Disabled = false;
+        speed = 5;
     }
 }

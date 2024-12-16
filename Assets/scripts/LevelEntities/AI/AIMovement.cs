@@ -75,7 +75,7 @@ public class AIMovement : MonoBehaviour
     {
         if (newTargetNode == null)
         {
-            Debug.LogError("No valid target node found.");
+          
             return;
         }
 
@@ -117,7 +117,7 @@ public class AIMovement : MonoBehaviour
             }
             else
             {
-                Debug.Log("Next tile is occupied, finding detour...");
+               
                 path = pathfindingStrategy.Detour(playerData.CurrentGridPosition, targetNode.Coordinates);
                 currentStepIndex = 0;  // Reset path index after recalculating
             }

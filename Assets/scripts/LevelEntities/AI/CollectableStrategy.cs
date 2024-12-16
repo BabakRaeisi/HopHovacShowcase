@@ -13,6 +13,7 @@ public class CollectableStrategy : StrategyBase
         base.Initialize(sam, playerData, aiController);
         CollectablePoolManager.OnCollectableSpawned += OnCollectableSpawned;
         CollectablePoolManager.OnCollectableDespawned += OnCollectableDespawned;
+        
     }
     public override void Enter()
     {

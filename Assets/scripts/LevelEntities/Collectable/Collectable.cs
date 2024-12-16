@@ -8,10 +8,9 @@ public abstract class Collectable : MonoBehaviour
     protected CollectablePoolManager poolManager;
     protected float lifetime = 10f;
     protected float despawnTimer;
-    private float rotationSpeed = 100f;
-
+ 
     [Header("VFX")]
-    public GameObject SpawnVFX;         // For when it's uncollected
+    public GameObject SpawnVFX;        // For when it's uncollected
     public GameObject idleVFX;         // For when it's uncollected
     public GameObject DespawnUncollectedVFX; // For when it times out
     public GameObject CollectedVFX; // For when it times out
@@ -35,29 +34,32 @@ public abstract class Collectable : MonoBehaviour
         this.assignedNode = node;
         GridPosition = node.Coordinates;
         assignedNode.AssignCollectable(this);
+        PlayVFX(SpawnVFX);
+        PlayVFX(idleVFX);
     }
-
+ 
     protected virtual void Update()
     {
         despawnTimer -= Time.deltaTime;
-       /* RotateCollectable();*/
+        
 
         if (despawnTimer <= 0)
         {
           PlayVFX(DespawnUncollectedVFX);
-            PlayVFX(DespawnUncollectedVFX);
-            StartCoroutine(DespawnAfterDelay());
+          
+           
         }
     }
 
     public virtual void Collect(PlayerData player)
     {
-        Despawn();
+        PlayVFX(CollectedVFX);
+        StartCoroutine(DespawnAfterDelay());
     }
     protected virtual IEnumerator DespawnAfterDelay() 
     {
 
-        yield return new WaitForSeconds(.50f);
+        yield return new WaitForSeconds(.20f);
         Despawn();
          
          
@@ -67,14 +69,11 @@ public abstract class Collectable : MonoBehaviour
     {
       
       assignedNode?.ClearCollectable();
-        poolManager.ReturnCollectable(this);
+      poolManager.ReturnCollectable(this);
        
     }
 
-   /* protected void RotateCollectable()
-    {
-        transform.Rotate(Vector3.up, rotationSpeed * Time.deltaTime);
-    }*/
+ 
     protected virtual void PlayVFX(GameObject vfx)
     {
         vfx.SetActive(true);

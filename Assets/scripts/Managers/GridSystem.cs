@@ -32,10 +32,13 @@ public class GridSystem : MonoBehaviour
 
 
         playerManager = new PlayerManager(this);
-        playerManager.UpdateOpponents(playersList);
+        
 
     }
-   
+    private void Start()
+    {
+        playerManager.UpdateOpponents(playersList);
+    }
 
     #endregion
 
@@ -64,10 +67,17 @@ public class GridSystem : MonoBehaviour
         // Convert grid coordinates to world position
         float worldX = gridPosition.x * unityGridSize;
         float worldZ = gridPosition.y * unityGridSize;
-
-        return new Vector3(worldX, 0, worldZ);  // Return the world position, assuming ground is at y = 0
+        
+        
+            return new Vector3(worldX, 0, worldZ);  // Return the world position, assuming ground is at y = 0
+      
     }
-
+    public Vector2Int GetWorldPositionFromGrid(Vector3 worldPosition)
+    {
+        int x = Mathf.RoundToInt(worldPosition.x / unityGridSize);
+        int y = Mathf.RoundToInt(worldPosition.z / unityGridSize);
+        return new Vector2Int(x, y);
+    }
 
     // Check if the target position is within grid boundaries and the node is not occupied
     public bool IsValidPosition(Vector2Int newCoords)

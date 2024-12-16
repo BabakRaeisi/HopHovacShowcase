@@ -13,12 +13,14 @@ public class AICognition : MonoBehaviour
     private StrategyEvaluator strategyEvaluator;
     private TextMeshPro stateText;
 
+    private bool isWaitingForReenable;
+
     private void Start()
     {
         aiController = GetComponent<AIController>();
         sam = new StrategyAvailabilityManager();
         strategyEvaluator = new StrategyEvaluator(sam, aiController, playerData, this);
-        stateText = GetComponentInChildren<TextMeshPro>();  
+        stateText = GetComponentInChildren<TextMeshPro>();
 
         // Initialize strategies
         foreach (var strategy in strategies)
@@ -29,6 +31,28 @@ public class AICognition : MonoBehaviour
 
     private void Update()
     {
+        // Check if player is disabled
+        if (playerData.Disabled)
+        {
+            if (!isWaitingForReenable)
+            {
+                ExitCurrentStrategy();
+                isWaitingForReenable = true;
+                if (stateText != null)
+                {
+                    stateText.text = "State: Disabled";
+                }
+            }
+            return; // Do nothing while disabled
+        }
+
+        // Re-enable when player is no longer disabled
+        if (isWaitingForReenable && !playerData.Disabled)
+        {
+            isWaitingForReenable = false;
+            EvaluateAndSetActiveStrategy(); // Re-evaluate strategy upon re-enabling
+        }
+
         sam.Update();
         EvaluateAndSetActiveStrategy();
         activeStrategy?.Execute();
@@ -58,16 +82,17 @@ public class AICognition : MonoBehaviour
         }
     }
 
+    private void ExitCurrentStrategy()
+    {
+        if (activeStrategy != null)
+        {
+            activeStrategy.Exit();
+            activeStrategy = null;
+        }
+    }
+
     public T GetStrategyByType<T>() where T : StrategyBase
     {
         return strategies.OfType<T>().FirstOrDefault();
     }
 }
-
-
-
-
-
-
-
-

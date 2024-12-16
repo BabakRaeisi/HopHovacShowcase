@@ -28,7 +28,7 @@ public class Movement : MonoBehaviour
     public void InitializePosition(Transform playerTransform)
     {
         // Calculate the grid position based on the player's starting world position
-        currentGridPos = GetGridPositionFromWorld(playerTransform.position);
+        currentGridPos = gridSystem.GetWorldPositionFromGrid(playerTransform.position);
         targetPos = playerTransform.position;
 
         // Mark the initial position in the grid system as occupied by this player
@@ -43,6 +43,7 @@ public class Movement : MonoBehaviour
         // Set smooth rotation to face the new direction regardless of whether the move is valid
         directionVector = new Vector3(direction.x, 0, direction.y);
         targetRotation = Quaternion.LookRotation(directionVector);
+        playerData.DirectionVec = directionVector; // here I am changing the direction in playerdata
         isRotating = true;
 
         // Attempt to move the player to the target grid position
@@ -52,7 +53,7 @@ public class Movement : MonoBehaviour
         if (gridSystem.PlayerManager.TryMovePlayer(playerData, targetGridPos))
         {
             // Perform the actual movement if the position is valid
-            targetPos = CalculateWorldPosition(targetGridPos);
+            targetPos = gridSystem.GetWorldPositionFromGrid(targetGridPos);
             isMoving = true;
         }
         else
@@ -81,7 +82,7 @@ public class Movement : MonoBehaviour
         {
             transform.position = targetPos;
             isMoving = false;
-            currentGridPos = GetGridPositionFromWorld(targetPos);  // Update the grid position once movement is finished
+            currentGridPos = gridSystem.GetWorldPositionFromGrid(targetPos);  // Update the grid position once movement is finished
 
             // Update PlayerData with the latest position
             playerData.CurrentGridPosition = currentGridPos;
@@ -112,17 +113,9 @@ public class Movement : MonoBehaviour
         }
     }
 
-    private Vector2Int GetGridPositionFromWorld(Vector3 worldPosition)
-    {
-        int x = Mathf.RoundToInt(worldPosition.x / gridSize);
-        int y = Mathf.RoundToInt(worldPosition.z / gridSize);
-        return new Vector2Int(x, y);
-    }
+    
 
-    private Vector3 CalculateWorldPosition(Vector2Int gridPosition)
-    {
-        return new Vector3(gridPosition.x * gridSize, transform.position.y, gridPosition.y * gridSize);
-    }
+    
 
     public bool IsMoving()
     {

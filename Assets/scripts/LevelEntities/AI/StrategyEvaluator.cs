@@ -58,7 +58,7 @@ public class StrategyEvaluator
 
     private float EvaluateMissileStrategy()
     {
-        if (playerData.HasMissile)
+        if (playerData.HasAbility)
         {
             float score = 100; // Highest priority when a missile is available
             PlayerData nearestOpponent = GetNearestOpponent();

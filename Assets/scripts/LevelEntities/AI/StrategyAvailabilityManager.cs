@@ -13,6 +13,8 @@ public class StrategyAvailabilityManager
         collectableCooldownDuration = Random.Range(1.5f, 3.5f);
         strategyAvailability["CollectableStrategy"] = false;
         strategyAvailability["CompeteStrategy"] = false;
+        strategyAvailability["ProjectileStrategy"] = false;
+        strategyAvailability["ExploreStrategy"] = true;
     }
 
     public void Update()

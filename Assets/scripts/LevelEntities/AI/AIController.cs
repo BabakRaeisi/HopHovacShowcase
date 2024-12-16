@@ -35,5 +35,6 @@ public class AIController : MonoBehaviour
 
     public void SetTargetNode(Node targetNode) => aiMovement.SetTargetNode(targetNode);
 
+    
     public bool ReachedTarget() => aiMovement.ReachedTarget();
 }

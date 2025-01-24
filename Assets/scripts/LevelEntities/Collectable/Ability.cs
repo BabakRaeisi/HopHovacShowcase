@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UPatterns;
 
 public abstract class Ability : MonoBehaviour
 {
@@ -9,26 +10,29 @@ public abstract class Ability : MonoBehaviour
     protected Vector3 direction;
     protected bool isActive = false;
     protected float currentLifetime;
-    protected AbilityType abilityType;
-    [SerializeField]protected PlayerData player;
-
+    [SerializeField]protected AbilityType abilityType;
+    [SerializeField] protected EffectType VisualizerType;
+    protected PlayerData playerData;
+    protected AbilityPoolManager abilityPoolManager;
+      protected SFXSelector SFXSelector;
     public AbilityType AbilityType { get { return abilityType; } }
+    
 
-    public virtual void Initialize(PlayerData player)
+    public virtual void Initialize(PlayerData player,AbilityPoolManager abilityPoolManager)
     {
-        this.player = player;
+        playerData = player;
+        this.abilityPoolManager = abilityPoolManager;
+        SFXSelector = GetComponent<SFXSelector>();
     }
-    protected virtual void Start()
-    {
-        
-    }
+    
 
  
     protected virtual  void Update()
     {
         
     }
-    public virtual void Activate(Vector3 direction, Vector3 playerTransform)
+    
+    public virtual void Activate()
     {
         gameObject.transform.SetParent(null);
     }

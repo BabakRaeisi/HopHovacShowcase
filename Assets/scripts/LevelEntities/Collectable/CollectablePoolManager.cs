@@ -1,5 +1,5 @@
-using System.Collections.Generic;
 using UnityEngine;
+using System.Collections.Generic;
 
 public class CollectablePoolManager : MonoBehaviour
 {
@@ -17,16 +17,9 @@ public class CollectablePoolManager : MonoBehaviour
     public static event System.Action<Collectable> OnCollectableDespawned;
 
     private bool isSpawningWave = false;
-    private void Awake()
-    {
-        InitializePool();
-    }
-    private void Start()
-    {
-        ScheduleNextWave();
-    }
+    private bool isPaused = false;
 
-    private void InitializePool()
+    public void Initialize()
     {
         foreach (var prefab in collectablePrefabs)
         {
@@ -34,10 +27,13 @@ public class CollectablePoolManager : MonoBehaviour
             newCollectable.gameObject.SetActive(false);
             collectablePool.Add(newCollectable);
         }
+        ScheduleNextWave();
     }
 
     private void Update()
     {
+        if (isPaused) return;
+
         // Check if all collectables are returned before starting a new wave
         if (activeCollectables.Count == 0 && !isSpawningWave)
         {
@@ -48,6 +44,8 @@ public class CollectablePoolManager : MonoBehaviour
 
     private void ScheduleNextWave()
     {
+        if (isPaused) return;
+
         int collectablesToSpawn = Random.Range(minCollectablesPerWave, maxCollectablesPerWave + 1);
         for (int i = 0; i < collectablesToSpawn; i++)
         {
@@ -58,6 +56,8 @@ public class CollectablePoolManager : MonoBehaviour
 
     private void SpawnCollectable()
     {
+        if (isPaused) return;
+
         Collectable collectable = GetRandomInactiveCollectable();
         if (collectable != null)
         {
@@ -104,9 +104,28 @@ public class CollectablePoolManager : MonoBehaviour
             activeCollectables.Remove(collectable);
             collectable.AssignedNode?.ClearCollectable();
             collectable.transform.SetParent(this.transform);
-            // Trigger the despawn event for AI agents
-           
         }
+    }
+
+    public void ReclaimAllCollectables()
+    {
+        foreach (var collectable in new List<Collectable>(activeCollectables))
+        {
+            ReturnCollectable(collectable);
+        }
+     
+    }
+
+    public void PauseSpawning()
+    {
+        isPaused = true;
+        CancelInvoke(nameof(ScheduleNextWave));
+    }
+
+    public void ResumeSpawning()
+    {
+        isPaused = false;
+        if (activeCollectables.Count == 0) ScheduleNextWave();
     }
 
     private Node GetRandomUnoccupiedNode()

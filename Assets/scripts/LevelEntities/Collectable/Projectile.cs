@@ -3,46 +3,53 @@ using UnityEngine;
 
 public class Projectile : Ability 
 {
-
+   
     [Header("Ability Settings")]
-    public float speed = 20f;
-    public float maxLifetime = 5f; 
+    protected float OriginalSpeed = 20f;
+    protected float speed;
+    protected float maxLifetime = 5f; 
 
-    public  Rigidbody rb;
-    public  SphereCollider sphereCollider;
-    public GameObject launchVFX;
- 
-    public override void Initialize(PlayerData player)
+    [SerializeField]protected  Rigidbody rb;
+    [SerializeField] protected  SphereCollider sphereCollider;
+    [SerializeField] protected GameObject launchVFX;
+    
+
+
+
+
+    public override void Initialize(PlayerData player, AbilityPoolManager abilityPoolManager)
     {
-        base.Initialize(player);
-        abilityType = AbilityType.Projectile;
+        base.Initialize(player,abilityPoolManager);
+       
         gameObject.SetActive(false);
+        
        
     }
 
-    public override void Activate(Vector3 direction, Vector3 pos)
+    public override void Activate( )
     {
-        base.Activate(direction, pos);
+        base.Activate();
         StopAllCoroutines();
-
+        SFXSelector.Initialize();
         // Setup projectile properties
-        this.direction = direction.normalized;
+        this.direction = playerData.DirectionVec.normalized;
         isActive = true;
         currentLifetime = maxLifetime;
-
+        speed = OriginalSpeed;
         // Position and rotation
-        transform.position = pos ;
+        transform.position = playerData.GetFrontGridPosition();
         transform.rotation = Quaternion.LookRotation(direction);
 
         // Activate launch VFX
         if (launchVFX != null)
             launchVFX.SetActive(true);
-
+      
+       
         StartCoroutine(MoveForward());
     }
 
    
-    private void OnCollisionEnter(Collision collision)
+    protected virtual void OnCollisionEnter(Collision collision)
     {
         if (!isActive) return;
 
@@ -52,21 +59,24 @@ public class Projectile : Ability
             PlayerData hitPlayer = collision.transform.GetComponent<PlayerData>();
             if (hitPlayer != null)
             {
-                
-                hitPlayer.HitDisable();
+                hitPlayer.HitDisable(VisualizerType);
+                SFXSelector.Finish(collision.transform.position);
+
             }
         }
-        else if (collision.transform.CompareTag("Wall"))
+        else if (collision.transform.CompareTag("Obstacle"))
         {
-           
+           SFXSelector.Finish(collision.transform.position);
+           abilityPoolManager.GetEffect(VisualizerType, this.transform.position );
         }
 
- 
 
         Deactivate();
+
+
     }
 
-    private IEnumerator MoveForward()
+    protected virtual IEnumerator MoveForward()
     {
         while (isActive)
         {
@@ -75,17 +85,11 @@ public class Projectile : Ability
         }
     }
 
-    private void Deactivate()
+    protected virtual void Deactivate()
     {
-      
-        
-        player.abilityPoolManager.ReturnAbility(this, AbilityType.Projectile);
-        player = null;  
         isActive = false;
-        gameObject.SetActive(false);
-
-       
-      
+        speed = 0;
+        abilityPoolManager.ReturnAbility(this, abilityType);
     }
 
 }

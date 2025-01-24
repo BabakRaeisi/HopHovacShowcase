@@ -1,38 +1,81 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using Unity.VisualScripting;
+using TMPro;
+ 
 using UnityEngine;
-using UnityEngine.UIElements;
+ 
 
 
 public class PlayerData :MonoBehaviour {
 
 
-    [Header("VFX")]
-    public GameObject DisabledVFX; 
-    public GameObject HitVFX;
-    public GameObject HasAbilityVFX;
+    public PlayerUIInfo playerUIInfo;
 
-    [Header("player settings")]
-    // Basic player properties
-    [SerializeField] private string playerName;              // Name of the player
-    [SerializeField] private float speed = 5f;               // Speed of the player
-    [SerializeField] private Color playerColor = Color.white; // Color associated with the player
-    [SerializeField] private int points = 0;                 // Player's current points
-    [SerializeField] private float speedRotation = 5f;       // Speed at which the player rotates
-    [SerializeField] private Vector2Int currentGridPosition;  
-    [SerializeField] private Node targetNode;
-      public  GridSystem gridSystem;
+    public PlayerState state = PlayerState.Neutral;
+    private float speed = 5f;               
+    private int points = 0;                 
+    private float speedRotation = 5f;       
+    private Vector2Int currentGridPosition;
+    private Vector2Int initialGridPosition;
+    private Node targetNode;
+    private  GridSystem gridSystem;
+    [SerializeField]private AbilityPoolManager abilityPoolManager;
+    private Ability currentAbility;
+    private List<(PlayerData, int)> opponentsWithUI;
+    private List<Node> ownedTiles = new List<Node>();  // List of nodes owned by the player
+    private bool hasAbility = false;
+    private bool hasShield = false;
     
-    
-    // Opponent tracking properties
-
-    private List<PlayerData> opponents = new List<PlayerData>();  // Private list of opponents
+    // Private list of opponents
     public PlayerData MainCompetitor { get; private set; }        // Primary competitor for score or position
-    public Vector2Int TargetLocation;     
+ 
+    public event Action OnReset;
+    
+    // Properties
+
+    public List<(PlayerData, int)> OpponentsWithUI
+    {
+        get => opponentsWithUI;
+        set => opponentsWithUI = value; // Allow external assignment
+    }   // Public getter for Opponents
+    public List<Node> OwnedTiles => ownedTiles;        // Public getter for Owned Tiles
+
+    public bool HasAbility { get { return hasAbility; } set { hasAbility = value; } }
+    public bool HasShield { get { return hasShield; } set { hasShield = value; } }
+    public int  ImageIndex { get; set; }
+    public float Speed => speed;
+    public Material PlayerMaterial  ;
+    public int Points => points;
+    public float SpeedRotation => speedRotation;
+    public Vector2Int CurrentGridPosition
+    {
+        get => currentGridPosition;
+        set => currentGridPosition = value;
+    }
+    public Vector2Int InitialGridPosition
+    {
+        get => initialGridPosition;
+        set => initialGridPosition = value;
+    }
+
+
+    public Vector3 DirectionVec;
      
-    public AbilityPoolManager abilityPoolManager;
+    public bool isDuringRound;
+
+    [Header("VFX")]
+    public GameObject DisabledVFX;
+   
+    public GameObject HasAbilityVFX;
+    public GameObject HasShieldVFX;
+
+   
+    public PlayerState State
+    {
+        get => state;
+        set => state = value;
+    }
 
     private void Awake()
     {
@@ -44,40 +87,34 @@ public class PlayerData :MonoBehaviour {
     public Node TargetNode { get { return targetNode; } set
         { 
             targetNode = value;
-            TargetLocation = targetNode.Coordinates;
         }
     }
 
-    // Tracking tile ownership and collectables
-    private List<Node> ownedTiles = new List<Node>();  // List of nodes owned by the player
-    public bool hasAbility = false;                   // Flag to track missile possession
-
-
-
-    // Properties
-    public List<PlayerData> Opponents => opponents;    // Public getter for Opponents
-    public List<Node> OwnedTiles => ownedTiles;        // Public getter for Owned Tiles
-
-    // Accessors for properties
-    public string PlayerName => playerName;
-    public float Speed => speed;
-    public Color PlayerColor => playerColor;
-    public int Points => points;
-    public float SpeedRotation => speedRotation;
-    public Vector2Int CurrentGridPosition
+    public void ResetPlayer() 
     {
-        get => currentGridPosition;
-        set => currentGridPosition = value;
+        state = PlayerState.Neutral; // Reset to neutral
+
+
+        this.transform.position = gridSystem.GetWorldPositionFromGrid(initialGridPosition);
+        currentGridPosition = initialGridPosition;
+       
+        ResetPoints();
+        RemoveAbility(currentAbility);
+       
+        DisableVFX(DisabledVFX);
+        
+        DisableVFX(HasAbilityVFX);
+        DisableVFX(HasShieldVFX);
+        speed = 5;
+        hasAbility = false;
+        hasShield = false;
+        ownedTiles.Clear();
+        gridSystem.PlayerManager.TryMovePlayer(this, currentGridPosition);
+        OnReset?.Invoke();
     }
-     
-    public GameObject projectileObject;
-    public Vector3 DirectionVec;
+   
 
-    public Ability currentAbility;
-    public bool Disabled; 
-
-  
-    private Vector3 GetFrontGridPosition()
+    public Vector3 GetFrontGridPosition()
     {
         Vector2Int direction = new Vector2Int(
             Mathf.RoundToInt(DirectionVec.x),
@@ -85,7 +122,23 @@ public class PlayerData :MonoBehaviour {
         );
         return gridSystem.GetWorldPositionFromGrid(CurrentGridPosition + direction) + Vector3.up * 0.5f;
     }
-    // Methods to manage points
+
+    public void SetShield(bool state) 
+    {  
+        HasShield = state; 
+        EnableVFX(HasShieldVFX);
+        StartCoroutine(ShieldDuration());
+        SoundManager.Instance.PlayOneShotSound("Shield", this.transform.position);
+    }
+
+    private IEnumerator ShieldDuration()
+    {
+         yield return new WaitForSeconds(5.5f);
+        HasShield=false;
+        DisableVFX(HasShieldVFX);
+    }
+
+ 
     public void AddPoints()
     {
         // Add points based on the number of owned tiles, excluding the last one
@@ -106,30 +159,27 @@ public class PlayerData :MonoBehaviour {
         {
             node.ResetOwnership();
         }
-
+        
         // Clear all nodes except the last one
         ownedTiles.Clear();
         ownedTiles.Add(lastNode);
+        playerUIInfo.playerScore.text = points.ToString();
     }
+   
 
     public void ResetPoints()
     {
         points = 0;
+        playerUIInfo.playerScore.text = points.ToString();
     }
 
  
     // Opponent management
-    public void SetOpponents(List<PlayerData> newOpponents)
+    public void SetOpponents(List<(PlayerData,int)> newOpponents)
     {
-        
-        opponents = newOpponents;
-       
+        opponentsWithUI = newOpponents;
     }
-
-    public void SetMainCompetitor(PlayerData competitor)
-    {
-        MainCompetitor = competitor;
-    }
+     
 
     // Owned tile management
     public void AddOwnedTile(Node tile)
@@ -144,11 +194,11 @@ public class PlayerData :MonoBehaviour {
     }
     
      
-    public bool HasAbility => hasAbility;
+
     public void AddAbility(AbilityType abilityType)
     {
 
-        if (!hasAbility)
+        if (!hasAbility&&state==PlayerState.Active)
         {
             GetAbility(abilityType);
         }
@@ -162,25 +212,30 @@ public class PlayerData :MonoBehaviour {
     private void GetAbility(AbilityType abilityType)
     {
         currentAbility = abilityPoolManager.GetAbility(abilityType, this);
+
+        if (currentAbility == null)
+        {
+            Debug.LogError($"[PlayerData] Failed to get ability of type {abilityType}. Pool might be empty or not initialized.");
+            return;
+        }
+
         currentAbility.transform.SetParent(this.transform);
-
-
         currentAbility.transform.position = GetFrontGridPosition();
-
-
         currentAbility.gameObject.SetActive(false);
-
 
         hasAbility = true;
         EnableVFX(HasAbilityVFX);
+
+       
     }
+
 
     public void UseAbility()
     {
         if (hasAbility && currentAbility != null)
         {
             currentAbility.gameObject.SetActive(true);
-            currentAbility.Activate(DirectionVec, GetFrontGridPosition());
+            currentAbility.Activate();
             hasAbility = false;
             DisableVFX(HasAbilityVFX);
         }
@@ -189,18 +244,18 @@ public class PlayerData :MonoBehaviour {
     {
         if (currentAbility != null)
         {
-            // Return the ability to the AbilityPoolManager
-            currentAbility.transform.SetParent(abilityPoolManager.transform);
+           
+            hasAbility = false;
 
-            // Deactivate and return the ability to the pool
+            currentAbility.transform.SetParent(abilityPoolManager.transform);
             abilityPoolManager.ReturnAbility(currentAbility, currentAbility.AbilityType);
 
             currentAbility = null;
-            hasAbility = false;
             DisableVFX(HasAbilityVFX);
         }
     }
 
+    public void SetRoundStatus(bool state) => isDuringRound = state;
     private void DisableVFX(GameObject gameObject) 
     {
     gameObject.SetActive(false);
@@ -211,7 +266,7 @@ public class PlayerData :MonoBehaviour {
 
         gameObject.SetActive(true);
     }
-
+    
     private IEnumerator SmoothSpeedReduction(float duration)
     {
         float initialSpeed = speed;
@@ -246,21 +301,38 @@ public class PlayerData :MonoBehaviour {
         // Ensure the player is exactly at the target position
         transform.position = targetPosition;
     }
-
-    public void HitDisable()
+    private Vector3 offsetVFX = new Vector3(0, 2f, 0);
+    public void HitDisable(EffectType VFX) // get proper VFX with enum
     {
-        EnableVFX(HitVFX);
-        Disabled = true;
-        // Remove ability if present
-        if (hasAbility)
+        if (state == PlayerState.Disabled) return;
+        if (state == PlayerState.Active)
         {
+            if (hasShield)
+            {
+
+                StartCoroutine(ShieldDisable());
+
+                return;
+            }
+            state = PlayerState.Disabled;
             RemoveAbility(currentAbility);
+            
+            abilityPoolManager.GetEffect(VFX, this.transform.position + offsetVFX);
+            
+            
+            // Remove ability if present
+
+            // Start the speed reduction coroutine and snap to the grid at the end
+            StartCoroutine(DisableWithSpeedReduction());
         }
-
-        // Start the speed reduction coroutine and snap to the grid at the end
-        StartCoroutine(DisableWithSpeedReduction());
     }
-
+    private IEnumerator ShieldDisable()
+    {
+        yield return new WaitForSeconds(1.5f);
+        hasShield = false;
+        SoundManager.Instance.PlayOneShotSound("Shield", this.transform.position);
+        DisableVFX(HasShieldVFX);
+    }
     private IEnumerator DisableWithSpeedReduction()
     {
         // Smoothly reduce speed to zero
@@ -268,15 +340,26 @@ public class PlayerData :MonoBehaviour {
 
         // Snap the player to the nearest grid position
        StartCoroutine(SmoothSnapToGridPosition(1f));
-
+        SoundManager.Instance.PlayOneShotSound("Dizzy", this.transform.position);
         // Wait for the rest of the disable duration
         DisabledVFX.SetActive(true);
         yield return new WaitForSeconds(2.5f); // Adjust disable time as needed
 
         // Re-enable speed and disable VFX
         DisableVFX(DisabledVFX);
-        DisableVFX(HitVFX);
-        Disabled = false;
-        speed = 5;
+       
+        if (isDuringRound)
+        {
+            state = PlayerState.Active;
+            speed = 5;
+        }
+       
     }
+}
+public enum PlayerState
+{
+    Neutral,    // Before or after the round (reset state)
+    Active,     // During the round, player can move
+    Disabled,   // Temporarily unable to act (e.g., hit or stunned)
+    Locked      // Locked during setup or between rounds
 }

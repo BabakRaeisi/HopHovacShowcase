@@ -1,61 +1,89 @@
 using System.Collections.Generic;
-using UnityEngine;
-using TMPro;
 using System.Linq;
+using UnityEngine;
 
+[RequireComponent(typeof(AIMovement))]
+[RequireComponent(typeof(AIController))]
+[RequireComponent(typeof(CollectableStrategy))]
+[RequireComponent(typeof(ExploreStrategy))]
+[RequireComponent(typeof(CompeteStrategy))]
+[RequireComponent(typeof(AIAbilityHandler))]
 public class AICognition : MonoBehaviour
 {
+    private PlayerData playerData;
     private AIController aiController;
     private StrategyBase activeStrategy;
-    public List<StrategyBase> strategies;
-    public StrategyAvailabilityManager sam;
-    public PlayerData playerData;
     private StrategyEvaluator strategyEvaluator;
-    private TextMeshPro stateText;
+
+    private List<StrategyBase> strategies = new List<StrategyBase>();
+    private StrategyAvailabilityManager sam;
 
     private bool isWaitingForReenable;
 
-    private void Start()
+    private void Awake()
     {
+        playerData = GetComponent<PlayerData>();
         aiController = GetComponent<AIController>();
-        sam = new StrategyAvailabilityManager();
-        strategyEvaluator = new StrategyEvaluator(sam, aiController, playerData, this);
-        stateText = GetComponentInChildren<TextMeshPro>();
 
         // Initialize strategies
+        strategies.Add(GetComponent<ExploreStrategy>());
+        strategies.Add(GetComponent<CollectableStrategy>());
+        strategies.Add(GetComponent<CompeteStrategy>());
+    }
+
+    private void Start()
+    {
+        sam = new StrategyAvailabilityManager();
+        strategyEvaluator = new StrategyEvaluator(sam, aiController, playerData, this);
+
+        // Initialize each strategy
         foreach (var strategy in strategies)
         {
             strategy.Initialize(sam, playerData, aiController);
         }
     }
 
+    private void OnEnable()
+    {
+        playerData.OnReset += ResetCognition;
+    }
+
+    private void OnDisable()
+    {
+        playerData.OnReset -= ResetCognition;
+    }
+
+    private void ResetCognition()
+    {
+        ExitCurrentStrategy();
+    }
+
     private void Update()
     {
-        // Check if player is disabled
-        if (playerData.Disabled)
+        if (playerData.State == PlayerState.Disabled)
         {
-            if (!isWaitingForReenable)
-            {
-                ExitCurrentStrategy();
-                isWaitingForReenable = true;
-                if (stateText != null)
-                {
-                    stateText.text = "State: Disabled";
-                }
-            }
-            return; // Do nothing while disabled
+            HandleDisabledState();
+            return;
         }
 
-        // Re-enable when player is no longer disabled
-        if (isWaitingForReenable && !playerData.Disabled)
+        if (isWaitingForReenable && playerData.State == PlayerState.Active)
         {
             isWaitingForReenable = false;
-            EvaluateAndSetActiveStrategy(); // Re-evaluate strategy upon re-enabling
+            EvaluateAndSetActiveStrategy();
         }
 
         sam.Update();
         EvaluateAndSetActiveStrategy();
         activeStrategy?.Execute();
+    }
+
+    private void HandleDisabledState()
+    {
+        if (!isWaitingForReenable)
+        {
+            ExitCurrentStrategy();
+            isWaitingForReenable = true;
+        }
     }
 
     public void EvaluateAndSetActiveStrategy()
@@ -64,11 +92,6 @@ public class AICognition : MonoBehaviour
         if (bestStrategy != null && bestStrategy != activeStrategy)
         {
             SetActiveStrategy(bestStrategy);
-
-            if (stateText != null)
-            {
-                stateText.text = $"State: {bestStrategy.GetType().Name}";
-            }
         }
     }
 

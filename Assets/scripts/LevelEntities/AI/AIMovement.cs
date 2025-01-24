@@ -5,9 +5,9 @@ using UnityEngine;
 public class AIMovement : MonoBehaviour
 {
     private GridSystem gridSystem;
-    public PlayerData playerData;
+    private PlayerData playerData;
     private Movement movement;
-
+    private Animator animator;
     public bool HasTarget { get { return hasTarget; } set { hasTarget = value; } }
     public Node TargetNode { get { return targetNode; } set { targetNode = value; } }
 
@@ -24,7 +24,9 @@ public class AIMovement : MonoBehaviour
 
     private void Awake()
     {
-        gridSystem = FindObjectOfType<GridSystem>();
+        playerData = GetComponent<PlayerData>();
+        animator = GetComponent<Animator>();
+        gridSystem = FindAnyObjectByType<GridSystem>();
         movement = GetComponent<Movement>();
         pathfindingStrategy = new AStarPathfindingStrategy(gridSystem);
       
@@ -99,6 +101,9 @@ public class AIMovement : MonoBehaviour
 
     private void MoveAlongPath()
     {
+        if (!(playerData.State==PlayerState.Active)){ 
+            animator.SetBool("IsWalking", false);
+            return; }
         if (currentStepIndex < path.Count && !movement.IsMoving())
         {
             Vector2Int nextStep = path[currentStepIndex].Coordinates;
@@ -122,5 +127,6 @@ public class AIMovement : MonoBehaviour
                 currentStepIndex = 0;  // Reset path index after recalculating
             }
         }
+        animator.SetBool("IsWalking", true);
     }
 }

@@ -1,9 +1,13 @@
 using UnityEngine;
 using System.Collections.Generic;
 using Unity.VisualScripting;
+using System;
+using System.Threading.Tasks;
+using UnityEngine.Events;
 
 public class GridSystem : MonoBehaviour
 {
+     
     [SerializeField] Vector2Int gridSize;
     [SerializeField] int unityGridSize;
     public int UnityGridSize { get { return unityGridSize; } }
@@ -11,7 +15,7 @@ public class GridSystem : MonoBehaviour
     public Vector2Int GridSize { get { return gridSize; } }
 
     public List<PlayerData>playersList ;
-
+    public GameManager gameManager;
     public Dictionary<Vector2Int, Node> Grid
     {
         get { return grid; }
@@ -24,20 +28,60 @@ public class GridSystem : MonoBehaviour
 
     private GridUtility gridInitializer;
     private PlayerManager playerManager;
+    public UnityEvent OnPlayersSetup;
+
+
     #region InitializeGrid
-    void Awake()
+    public async Task<bool> InitializeGridAsync()
     {
-        gridInitializer = new GridUtility();
-        grid = gridInitializer.InitializeGrid(tileGameObjects, unityGridSize);
+        try
+        {
+            // Simulate asynchronous delay if needed
+            await Task.Delay(100); // This is safe for non-Unity operations
 
+            // Unity API must run on the main thread
+            GridUtility gridInitializer = new GridUtility();
+            grid = gridInitializer.InitializeGrid(tileGameObjects, unityGridSize);
 
-        playerManager = new PlayerManager(this);
-        
-
+             
+            return true; // Return success
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"Grid initialization failed: {ex.Message}");
+            return false; // Return failure
+        }
     }
-    private void Start()
+
+
+    private void OnEnable()
     {
-        playerManager.UpdateOpponents(playersList);
+        gameManager.OnReset += ResetTiles;
+         
+    }
+    private void OnDisable()
+    {
+        gameManager.OnReset -= ResetTiles;
+ 
+    }
+
+    private void ResetTiles()
+    {
+        foreach (Node node in grid.Values)
+        {
+            if (!node.IsOccupied)
+            {
+                node.ResetOwnership();
+            }
+          
+        }
+      
+    }
+
+    public void HandlePlayerManager()
+    {
+        playerManager = new PlayerManager(this);
+        playerManager.ManagePlayers(playersList);
     }
 
     #endregion
@@ -95,7 +139,7 @@ public class GridSystem : MonoBehaviour
         // Randomly select nodes until we find an unoccupied one or reach max attempts
         while (attempts < maxAttempts)
         {
-            Vector2Int randomKey = keys[Random.Range(0, keys.Count)];  // Pick a random key
+            Vector2Int randomKey = keys[UnityEngine.Random.Range(0, keys.Count)];  // Pick a random key
             Node randomNode = grid[randomKey];  // Get the node associated with the random key
 
             // Check if the node is unoccupied and doesn't have a collectable

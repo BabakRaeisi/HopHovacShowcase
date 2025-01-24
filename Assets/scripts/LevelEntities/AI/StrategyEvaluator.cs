@@ -20,11 +20,6 @@ public class StrategyEvaluator
 
     public StrategyBase EvaluateBestStrategy()
     {
-        // Priority Level 1: Missile Strategy
-        if (sam.IsStrategyAvailable("ProjectileStrategy"))
-        {
-            return aiCognition.GetStrategyByType<ProjectileStrategy>();
-        }
 
         // Priority Level 2: Evaluate Collectable and Compete Strategies
         Dictionary<StrategyBase, float> strategyScores = new Dictionary<StrategyBase, float>();
@@ -56,24 +51,7 @@ public class StrategyEvaluator
         return null;
     }
 
-    private float EvaluateMissileStrategy()
-    {
-        if (playerData.HasAbility)
-        {
-            float score = 100; // Highest priority when a missile is available
-            PlayerData nearestOpponent = GetNearestOpponent();
-            if (nearestOpponent != null)
-            {
-                float distance = Vector2Int.Distance(playerData.CurrentGridPosition, nearestOpponent.CurrentGridPosition);
-                if (distance < 3)
-                {
-                    score += 20;
-                }
-            }
-            return score;
-        }
-        return 0;
-    }
+
 
     private float EvaluateCollectableStrategy()
     {
@@ -112,12 +90,22 @@ public class StrategyEvaluator
 
     private int GetHighestOpponentPoints()
     {
-        return playerData.Opponents.Max(opponent => opponent.Points);
+        if (playerData.OpponentsWithUI.Count == 0)
+        {
+            return 0;
+        }
+
+        // Extract the highest points from the OpponentsWithUI list
+        return playerData.OpponentsWithUI.Max(opponent => opponent.Item1.Points);
     }
+
 
     private PlayerData GetNearestOpponent()
     {
-        return playerData.Opponents.OrderBy(opponent => Vector2Int.Distance(playerData.CurrentGridPosition, opponent.CurrentGridPosition)).FirstOrDefault();
+        return playerData.OpponentsWithUI
+            .OrderBy(opponent => Vector2Int.Distance(playerData.CurrentGridPosition, opponent.Item1.CurrentGridPosition))
+            .Select(opponent => opponent.Item1) // Extract the PlayerData
+            .FirstOrDefault();
     }
 }
 

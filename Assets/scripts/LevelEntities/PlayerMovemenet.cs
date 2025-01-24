@@ -1,38 +1,45 @@
 using UnityEngine;
 using UnityEngine.InputSystem.LowLevel;
 
+[RequireComponent(typeof(PlayerAbilityActivator))]
 public class PlayerMovement : MonoBehaviour
 {
     private Movement movement; // Movement logic handling
-    private Vector2Int inputDirection = Vector2Int.zero; // The direction the player is moving in
-    public PlayerData playerData; // Player data including speed, points, etc.
-    
+    private Vector2Int inputDirection = Vector2Int.zero; // Direction the player is moving in
+    private PlayerData playerData; // Player data including speed, points, etc.
+    private Animator animator; // Animator component for handling animations
+
     private void Awake()
     {
-        movement = GetComponent<Movement>(); // Get the Movement component
-    }
-
-    private void Start()
-    {
-      
+        playerData = GetComponent<PlayerData>(); // Get PlayerData component
+        movement = GetComponent<Movement>(); // Get Movement component
+        animator = GetComponent<Animator>(); // Get Animator component
     }
 
     private void Update()
     {
+        if (!(playerData.State == PlayerState.Active)) { 
+     
+            animator.SetBool("IsWalking", false); // Set to Idle animation
+            return; // Stop movement and animation updates if player is disabled
+        }
+
         if (!movement.IsMoving())
         {
-            HandleInput(); // Only accept new input when not moving
+            HandleInput(); // Accept input when not moving
+            animator.SetBool("IsWalking", false); // Set to Idle animation
         }
-        if (Input.GetMouseButtonDown(0)) 
+        else
         {
-            playerData.hasAbility = false;
+            animator.SetBool("IsWalking", true); // Set to Walking animation
         }
     }
+
 
     private void HandleInput()
     {
         inputDirection = Vector2Int.zero;
-
+        if (playerData.State == PlayerState.Disabled) return;
         // Use keyboard or controller inputs to get the direction
         if (Input.GetKey(KeyCode.W))
         {

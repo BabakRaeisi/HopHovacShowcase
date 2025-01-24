@@ -43,7 +43,7 @@ public class CollectableStrategy : StrategyBase
         if (aiController.ReachedTarget() && currentTargetCollectable != null)
         {
             aiController.GetPlayerData().AddOwnedTile(aiController.GetPlayerData().TargetNode);
-            currentTargetCollectable.Collect(aiController.GetPlayerData());
+            
 
             currentTargetCollectable = null;
 

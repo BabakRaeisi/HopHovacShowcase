@@ -6,15 +6,17 @@ public class AIController : MonoBehaviour
     private AICognition aiCognition;
     private AIMovement aiMovement;
     private CollectablePoolManager collectablePoolManager;
-    [SerializeField] private PlayerData playerData;
+    private PlayerData playerData;
     private GridSystem gridSystem;
+
 
     private void Awake()
     {
+        playerData = GetComponent<PlayerData>();
         aiCognition = GetComponent<AICognition>();
         aiMovement = GetComponent<AIMovement>();
-        gridSystem = FindObjectOfType<GridSystem>();
-        collectablePoolManager = FindObjectOfType<CollectablePoolManager>();
+        gridSystem = FindAnyObjectByType<GridSystem>();
+        collectablePoolManager = FindAnyObjectByType<CollectablePoolManager>();
     }
 
     

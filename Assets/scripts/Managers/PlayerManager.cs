@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class PlayerManager
@@ -38,20 +39,30 @@ public class PlayerManager
     }
 
     // Method to set opponents for each player and identify their main competitor
-    public void UpdateOpponents(List<PlayerData> allPlayers)
+    public void ManagePlayers(List<PlayerData> allPlayers)
     {
         foreach (PlayerData player in allPlayers)
         {
-       
-            var opponents = new List<PlayerData>(allPlayers);
+            // Reset player state
             player.OwnedTiles.Clear();
             player.ResetPoints();
-            opponents.Remove(player);
-            player.SetOpponents(opponents);
 
+            // Assign initial grid position
+            player.InitialGridPosition = player.CurrentGridPosition;
+            TryMovePlayer(player, player.CurrentGridPosition);
+
+            // Link opponents with UI indices
+            var opponentsWithUI = allPlayers
+                .Where(opponent => opponent != player) // Exclude the player itself
+                .Select(opponent => (opponent, opponent.ImageIndex)) // Map opponents with ImageIndex
+                .ToList();
+            player.SetOpponents(opponentsWithUI);
+
+            // Disable player until game starts
+            player.State = PlayerState.Locked;
         }
     }
 
-    
-   
+
+
 }

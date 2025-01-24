@@ -9,83 +9,78 @@ public class Node
 
     private Collectable collectable;
 
-    public bool HasCollectable
-    {
-        get { return collectable != null; }  // Check if the node has a collectable
-    }
+    public bool HasCollectable => collectable != null;
 
     public void AssignCollectable(Collectable newCollectable)
     {
-        collectable = newCollectable;  // Assign a collectable to this node
-         
+        collectable = newCollectable;
     }
 
     public Collectable GetCollectable()
     {
-        return collectable;  // Return the collectable assigned to this node
+        return collectable;
     }
 
     public void ClearCollectable()
     {
-        collectable = null;  // Clear the collectable reference when it is collected
+        collectable = null;
     }
 
     // Occupied status
     public bool IsOccupied { get; set; }
-    private PlayerData owner;  // Private field to store the owner
+    private PlayerData owner;
 
     public PlayerData Owner
     {
         get => owner;
         set
         {
-            // Remove from previous owner's list if there was one
             if (owner != null)
                 owner.RemoveOwnedTile(this);
 
-            // Update the new owner
             owner = value;
 
-            // Add to new owner's list if there's a new owner
             if (owner != null)
                 owner.AddOwnedTile(this);
 
-            // Set color based on the owner or default if no owner
-            NodeColor = owner != null ? owner.PlayerColor : Color.gray;
+            if (owner != null)
+            { Tile.SetMaterial(owner.PlayerMaterial); } else { Tile.ResetMaterial();} 
         }
     }
 
-    // Node color updates the tile when changed
-    private Color nodeColor;
-    public Color NodeColor
+    // Node material updates the tile when changed
+    private Material nodeMaterial;
+    public Material NodeMaterial
     {
-        get => nodeColor;
+        get => nodeMaterial;
         set
         {
-            nodeColor = value;
-            Tile.SetColor(nodeColor);  // Automatically update tile appearance
+            nodeMaterial = value;
+            Tile.SetMaterial(nodeMaterial); // Automatically update tile appearance
         }
     }
+
+    // Default material for unowned nodes
+    public static Material DefaultMaterial { get; set; }
 
     // Constructor for Node
     public Node(Vector2Int coordinates, Tile tile)
     {
         Coordinates = coordinates;
         Tile = tile;
-        NodeColor = Color.gray;  // Default color is white
+        DefaultMaterial = Tile.UnoccupiedMat;
+        NodeMaterial = DefaultMaterial; // Default material for unowned nodes
         IsOccupied = false;
-        owner = null;  // No owner at initialization
+        owner = null;
     }
+
     public void ResetOwnership()
     {
-        // Remove from current owner's list if any
         if (owner != null)
             owner.RemoveOwnedTile(this);
 
-        owner = null;  // No owner
-        NodeColor = Color.gray;  // Default color
-        IsOccupied = false;       // Not occupied
+        owner = null;
+        NodeMaterial = DefaultMaterial;
+        IsOccupied = false;
     }
-
-
 }

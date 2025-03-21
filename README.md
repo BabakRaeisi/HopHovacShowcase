@@ -25,6 +25,6 @@ https://youtu.be/rcxuEdDlwiY
 ## Future Enhancements
 - Add more intelligent AI pathfinding.
 - Introduce more game modes and power-ups.
-- [not the final gameplay](https://github.com/BabakRaeisi/HopHovac/blob/Master/game.jpg)
+- [not the final gameplay]([https://github.com/BabakRaeisi/HopHovac/blob/Master/game.jpg](https://youtu.be/rcxuEdDlwiY))
  
 
